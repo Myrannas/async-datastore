@@ -32,7 +32,7 @@ import java.io.Closeable
  *
  * Call `close()` to perform all necessary clean up.
  */
-interface Datastore : Closeable {
+interface Datastore {
 
     /**
      * Start a new transaction.

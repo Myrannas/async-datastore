@@ -17,7 +17,7 @@
 package com.spotify.asyncdatastoreclient
 
 import com.google.datastore.v1.Mutation
-import com.google.datastore.v1.Mutation.*
+import com.google.datastore.v1.Mutation.newBuilder
 
 /**
  * A delete statement.
@@ -25,7 +25,6 @@ import com.google.datastore.v1.Mutation.*
  * Delete a single entity based on its `Key`.
  */
 class Delete internal constructor(key: Key) : KeyedStatement(key), MutationStatement {
-
     override fun getPb(namespace: String): Mutation {
         val mutationKey = key.getPb(namespace)
         return newBuilder().setDelete(mutationKey).build()

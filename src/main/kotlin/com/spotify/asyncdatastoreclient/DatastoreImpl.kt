@@ -16,67 +16,44 @@
 
 package com.spotify.asyncdatastoreclient
 
-import com.google.common.base.Throwables
 import com.google.datastore.v1.*
 import com.spotify.datastoreclient.Datastore
-import io.grpc.ManagedChannelBuilder
-import io.grpc.StatusException
+import io.grpc.*
+import io.grpc.auth.MoreCallCredentials
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import java.io.IOException
-import java.util.concurrent.Executors
-import java.util.concurrent.ScheduledExecutorService
-import java.util.concurrent.TimeUnit
+
+
 
 /**
  * The Datastore implementation.
  */
 internal class DatastoreImpl(private val config: DatastoreConfig) : Datastore {
 
-    private val executor: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor()
-    @Volatile
-    private var accessToken: String? = null
 
-    private var datastore: DatastoreGrpc.DatastoreFutureStub = DatastoreGrpc.newFutureStub(
-            ManagedChannelBuilder
-                    .forTarget(config.host)
-                    .build()
-    )
+    private val datastore: DatastoreGrpc.DatastoreFutureStub
 
     init {
-        if (config.credential != null) {
-            // block while retrieving an access token for the first time
-            refreshAccessToken()
+        val datastore = DatastoreGrpc.newFutureStub(
+                ManagedChannelBuilder
+                        .forTarget(config.host)
+                        .intercept(object : ClientInterceptor {
+                            override fun <ReqT : Any?, RespT : Any?> interceptCall(method: MethodDescriptor<ReqT, RespT>, callOptions: CallOptions, next: Channel): ClientCall<ReqT, RespT> {
+                                return next.newCall(method, callOptions)
+                            }
+                        })
+                        .build()
+        )
+
+        if (config.credential == null) {
+            this.datastore = datastore
+        } else {
+            this.datastore = datastore.withCallCredentials(MoreCallCredentials.from(config.credential))
         }
     }
 
     companion object {
         val log: Logger = LoggerFactory.getLogger(Datastore::class.java)
-    }
-
-    override fun close() {
-        executor.shutdown()
-    }
-
-    fun refreshAccessToken() {
-        val credential = config.credential
-
-        if (credential != null) {
-            val expiresIn = credential.expiresInSeconds
-
-            // trigger refresh if token is about to expire
-            if (credential.accessToken == null || expiresIn != null && expiresIn <= 60) {
-                try {
-                    credential.refreshToken()
-                    val accessTokenLocal = credential.accessToken
-                    if (accessTokenLocal != null) {
-                        this.accessToken = accessTokenLocal
-                    }
-                } catch (e: IOException) {
-                    log.error("Storage exception", Throwables.getRootCause(e))
-                }
-            }
-        }
     }
 
     override suspend fun transaction(): TransactionResult/* = async(CommonPool)*/ {

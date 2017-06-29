@@ -28,9 +28,11 @@ dependencies {
     compile "io.grpc:grpc-netty:${grpcVersion}"
     compile "io.grpc:grpc-protobuf:${grpcVersion}"
     compile "io.grpc:grpc-stub:${grpcVersion}"
+    compile "io.grpc:grpc-auth:${grpcVersion}"
     compile group: 'org.jetbrains.kotlinx', name: 'kotlinx-coroutines-core', version: '0.16'
     compile group: 'org.slf4j', name: 'slf4j-api', version: '1.7.25'
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
+
 }
 
 sourceSets {
